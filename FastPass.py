@@ -1,83 +1,70 @@
+import os
+
 from Crypto.Cipher import AES
 import sqlite3
 from base64 import b64decode, b64encode
+import sys, os
+import signal
 
-"""
-Add
-key=b'TestVar123456789'
 
-cipher = AES.new(key, AES.MODE_GCM)
-nonce = cipher.nonce
-data=b"S3curePas2sord"
-ciphertext, tag = cipher.encrypt_and_digest(data)
+def handler(signum, frame):
+    print("Exiting...")
+    sys.exit(0)
 
-connection=sqlite3.connect("test.db")
-cursor=connection.cursor()
-cursor.execute("CREATE TABLE IF NOT EXISTS passwords(username text, ciphertext text, nonce text, tag text)")
-cursor.execute("INSERT INTO passwords VALUES('gcmTest','"+b64encode(ciphertext).decode('utf-8')+"', '"+b64encode(nonce).decode('utf-8')+"', '"+b64encode(tag).decode('utf-8')+"')")
-connection.commit()
-connection.close()
-"""
-"""
-Retrieve
-connection=sqlite3.connect("test.db")
-cursor=connection.cursor()
-for row in cursor.execute("SELECT * FROM passwords"):
-    username=row[0]
-    cipherPass=b64decode(row[1])
-    nonce=b64decode(row[2])
-    tag=b64decode(row[3])
-    key=bytearray(input("Input key to decipher").encode())
-    try:
-        cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-        plaintext = cipher.decrypt(cipherPass)
-        cipher.verify(tag)
-        print("Password for user "+username+": ", plaintext.decode())
-    except ValueError:
-        print("Key incorrect or message corrupted")
-"""
+
+signal.signal(signal.SIGINT, handler)
 
 if __name__=="__main__":
     connection = sqlite3.connect("passwords.db")
     cursor = connection.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS passwords(username text, ciphertext text, website text, nonce text, tag text)")
+    cursor.execute("CREATE TABLE IF NOT EXISTS passwords(ciphertextUser text, ciphertextPass text, website text, noncePass text, tagPass text, nonceUser text, tagUser text)")
     while True:
-        choice=input("(a) Add Credentials/ (s) See Credentials: ")
+        choice=input("(a) Add Credentials/(s) See Credentials/(q) Quit: ")
         if choice == "a":
-            username=input("Input username: ")
-            data=bytearray(input("Input password: ").encode())
+            dataUser=bytearray(input("Input username: ").encode())
+            dataPass=bytearray(input("Input password: ").encode())
             website= input("Input website/game it is for (optional): ")
             masterKey=bytearray(input("Input master Key (16 characters): ").encode())
             try:
-                cipher = AES.new(masterKey, AES.MODE_GCM)
-                nonce = cipher.nonce
-                ciphertext, tag = cipher.encrypt_and_digest(data)
-                cursor.execute("INSERT INTO passwords VALUES(?,?,?,?,?)",(username,b64encode(ciphertext).decode('utf-8'),website,b64encode(nonce).decode('utf-8'),b64encode(tag).decode('utf-8')))
+                cipherUser = AES.new(masterKey, AES.MODE_GCM)
+                nonceUser = cipherUser.nonce
+                ciphertextUser, tagUser = cipherUser.encrypt_and_digest(dataUser)
+                cipherPass = AES.new(masterKey, AES.MODE_GCM)
+                noncePass = cipherPass.nonce
+                ciphertextPass, tagPass = cipherPass.encrypt_and_digest(dataPass)
+                cursor.execute("INSERT INTO passwords VALUES(?,?,?,?,?,?,?)",(b64encode(ciphertextUser).decode('utf-8'),b64encode(ciphertextPass).decode('utf-8'),website,b64encode(noncePass).decode('utf-8'),b64encode(tagPass).decode('utf-8'),b64encode(nonceUser).decode('utf-8'),b64encode(tagUser).decode('utf-8')))
                 connection.commit()
                 print("[+] Credentials added successfully")
-            except :
-                print("[-] Something went wrong :/")
+            except ValueError:
+                print("[-] Something went wrong :/",ValueError)
         elif choice == "s":
             key = bytearray(input("Input master key: ").encode())
             usernames=[]
             passwords=[]
             websites=[]
             for row in cursor.execute("SELECT * FROM passwords"):
-                username = row[0]
+                cipherUser = b64decode(row[0])
                 cipherPass = b64decode(row[1])
                 website=row[2]
-                nonce = b64decode(row[3])
-                tag = b64decode(row[4])
+                noncePass = b64decode(row[3])
+                tagPass = b64decode(row[4])
+                nonceUser = b64decode(row[5])
+                tagUser = b64decode(row[6])
                 try:
-                    cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
-                    plaintext = cipher.decrypt(cipherPass)
-                    cipher.verify(tag)
-                    usernames.append(username)
-                    passwords.append(plaintext.decode())
+                    AESPass = AES.new(key, AES.MODE_GCM, nonce=noncePass)
+                    plaintextPass = AESPass.decrypt(cipherPass)
+                    AESPass.verify(tagPass)
+                    passwords.append(plaintextPass.decode())
+                    AESUser = AES.new(key, AES.MODE_GCM, nonce=nonceUser)
+                    plaintextUser = AESUser.decrypt(cipherUser)
+                    AESUser.verify(tagUser)
+                    usernames.append(plaintextUser.decode())
                     websites.append(website)
-                except:
-                    print("[-] Incorrect master key!")
+                except ValueError:
+                    print("[-] Incorrect master key!",ValueError)
             for i in range(0,len(usernames)):
                 print("---------------------------------------------------------------------------")
                 print("Username: "+usernames[i]+"\nPassword: "+passwords[i]+"\nWebsite: "+websites[i])
                 print("---------------------------------------------------------------------------")
+        elif choice=="x":
+            sys.exit(0)
