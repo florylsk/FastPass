@@ -2,7 +2,7 @@
 
 Simple and intuitive tool to store credentials with 128 bit AES in Galois/Counter mode in a SQLite3 database. Supports different keys for different passwords. GUI coming soon.
 
-# usage
+# Usage
 There are two main modes, interactive and non-interactive. Interactive is self-explanatory. For non-interactive:
 ```text
 usage: python3 FastPass.py [-h] [-s] [-u USERNAME] [-p PASSWORD] [-w WEBSITE]
