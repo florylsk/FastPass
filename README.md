@@ -23,4 +23,10 @@ optional arguments:
                         Website/company/usage of the credentials (unencrypted)
   -r, --read            Read the current database with a master key
   -k KEY, --key KEY     Master key used to unencrypt some/all the credentials
+  
+Example usage:
+
+$python3 FastPass.py --store -u Test -p Var -w Google -k TestVar123456789
+
+$python3 FastPass.py --read -k TestVar123456789
 ```
